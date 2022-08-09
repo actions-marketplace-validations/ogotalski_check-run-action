@@ -1,4 +1,7 @@
 # Step to check action
+
+[![units-test](https://github.com/ogotalski/step-to-check-action/actions/workflows/test.yml/badge.svg)](https://github.com/ogotalski/step-to-check-action/actions/workflows/test.yml)
+
 #### Description
 Creates check to PR based on previous step result May be used if you want to run several checks in one job because preparing runner could be time consuming  
 
