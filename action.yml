@@ -1,0 +1,16 @@
+name: 'Step to Check action'
+description: 'Creates check with previous step results'
+inputs:
+  token:
+    description: "Github personal token to add commits to Pull Request"
+    required: false
+    default: ${{github.token}}
+  outputFile:
+    description: "Output for check summary"
+    required: false
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
+branding:
+  icon: "check"
+  color: "blue"
