@@ -1,4 +1,4 @@
-name: 'Run-check'
+name: 'Check-Run'
 description: 'Wraps execution of command-line programs with check'
 inputs:
   token:

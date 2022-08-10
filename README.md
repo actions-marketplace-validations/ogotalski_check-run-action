@@ -1,6 +1,5 @@
-# Step to check action
+# Check run action
 
-[![units-test](https://github.com/ogotalski/step-to-check-action/actions/workflows/test.yml/badge.svg)](https://github.com/ogotalski/step-to-check-action/actions/workflows/test.yml)
 
 #### Description
 Wraps execution of command-line programs with check
@@ -9,7 +8,7 @@ Wraps execution of command-line programs with check
 ###### Configuration:
 ```yaml
       - name: add check
-        uses: ogotalski/step-run@v1.2
+        uses: ogotalski/check-run-action@v1.2
         with:
           run: |
             chmod +x gradlew
@@ -39,7 +38,7 @@ jobs:
         run: echo '${{ toJSON(steps) }}'
       - name: add check
         id: test
-        uses: ogotalski/step-run@v1.2
+        uses: ogotalski/check-run-action@v1.2
         with:
           run: |
             chmod +x gradlew

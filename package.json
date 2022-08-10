@@ -1,5 +1,5 @@
 {
-  "name": "Run-check",
+  "name": "Check-run",
   "version": "1.2",
   "description": "Wraps execution of command-line programs with check",
   "main": "index.js",
