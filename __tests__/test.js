@@ -1,9 +1,10 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
 const action = require("../src/action");
+const exec = require("@actions/exec");
 jest.mock("@actions/core");
 jest.mock("@actions/github");
-
+jest.mock("@actions/exec");
 
 describe("Test", function () {
     let createCheck
@@ -12,8 +13,10 @@ describe("Test", function () {
         switch (key) {
             case "token":
                 return null
-            case "outputFile":
-                return null
+            case "run":
+                return "ls"
+            case "continueOnFail":
+                return "true"
         }
     }
 
@@ -39,6 +42,11 @@ describe("Test", function () {
             console.log(c);
             fail(c);
         });
+        exec.exec = jest.fn((c, a, o) => {
+            o.listeners.stdout({toString: jest.fn(() => "stdout")})
+            o.listeners.stderr({toString: jest.fn(() => "stderr")})
+            return 0
+        })
     })
 
     const listJobsForWorkflowRunResponse = JSON.parse(
@@ -153,8 +161,10 @@ describe("Test", function () {
                     },
                 },
             },
-            repo: "test",
-            owner: "ogotalski",
+            repo: {
+                repo: "test",
+                owner: "ogotalski"
+            },
             runId: "12345",
             job: "build"
         };
@@ -163,16 +173,13 @@ describe("Test", function () {
             github.context = context;
 
             await action.run();
-
-            expect(createCheck.mock.calls[0][0])
-                .toEqual(JSON.parse("{\n" +
-                    "  \"completed_at\": \"2022-08-08T18:34:57.000Z\",\n" +
-                    "  \"conclusion\": \"success\",\n" +
-                    "  \"head_sha\": \"head\",\n" +
-                    "  \"name\": \"Test coverage report\",\n" +
-                    "  \"started_at\": \"2022-08-08T18:34:07.000Z\",\n" +
-                    "  \"status\": \"completed\"\n" +
-                    "}"));
+            const expected = JSON.parse("{\"owner\":\"ogotalski\",\"repo\":\"test\",\"head_sha\":\"head\",\"name\":\"add check\",\"status\":\"completed\",\"conclusion\":\"success\",\"started_at\":\"2022-08-10T20:05:13.355Z\",\"completed_at\":\"2022-08-10T20:05:13.356Z\",\"output\":{\"title\":\"add check\",\"summary\":\"### Result: success\",\"text\":\"<dl><dd><details><summary><kbd><b>ls</b></kbd> -  :heavy_check_mark: <b>success</b> in  1ms </summary>\\n\\n\\n\\n```\\nstdoutstderr```\\n\\n\\n</details>\\n\\n</dd></dl>\"}}")
+            let result = createCheck.mock.calls[0][0];
+            result.output.text = expected.output.text
+            result.started_at = expected.started_at
+            result.completed_at = expected.completed_at
+            expect(result)
+                .toEqual(expected);
         });
     });
 });

@@ -3,18 +3,19 @@
 [![units-test](https://github.com/ogotalski/step-to-check-action/actions/workflows/test.yml/badge.svg)](https://github.com/ogotalski/step-to-check-action/actions/workflows/test.yml)
 
 #### Description
-Creates check to PR based on previous step result May be used if you want to run several checks in one job because preparing runner could be time consuming  
-
+Wraps execution of command-line programs with check
 
 #### Usage:
 ###### Configuration:
 ```yaml
       - name: add check
-        if: always()
-        uses: ogotalski/step-to-check-action@V1.0
+        uses: ogotalski/step-run@v1.2
         with:
-          #Optional Output for check summary details
-          outputFile: ${{ github.workspace }}/output.txt
+          run: |
+            chmod +x gradlew
+            ls
+            ./gradlew test jacocoTestReport
+          name: Test
 ```
 
 
@@ -36,14 +37,25 @@ jobs:
           java-version: 1.8
       - name: Dump steps context
         run: echo '${{ toJSON(steps) }}'
-      - name: Run Coverage
-        run: |
-          chmod +x gradlew
-          ./gradlew test jacocoTestReport | tee ${{ github.workspace }}/output.txt
-        continue-on-error: true
       - name: add check
-        if: always()
-        uses: ogotalski/step-to-check-action@V1.0
+        id: test
+        uses: ogotalski/step-run@v1.2
         with:
-          outputFile: ${{ github.workspace }}/output.txt
+          run: |
+            chmod +x gradlew
+            ls
+            ./gradlew test jacocoTestReport
+          name: Test
+      - name: Test coverage report
+        if: ${{steps.test.output.conclusion == 'success'}}
+        uses: ogotalski/test-coverage-report@download_artifact
+        with:
+          paths: ${{ github.workspace }}/build/reports/jacoco/test/jacocoTestReport.xml,${{ github.workspace }}/MathUtils/build/reports/jacoco/test/jacocoTestReport.xml
+          sourcePaths: ${{ github.workspace }}/src/main/kotlin,${{ github.workspace }}/MathUtils/src/main/java
+          masterPaths: ${{ github.workspace }}/code-coverage-report/build/reports/jacoco/test/jacocoTestReport.xml,${{ github.workspace }}/code-coverage-report/MathUtils/build/reports/jacoco/test/jacocoTestReport.xml
+          updateComment: true
+          debug: true
+          artifactWorkflow: main.yml
+          artifactName: code-coverage-report
+          downloadPath: code-coverage-report
 ```

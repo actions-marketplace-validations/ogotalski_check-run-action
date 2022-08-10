@@ -1,13 +1,21 @@
-name: 'Step to Check action'
-description: 'Creates check with previous step results'
+name: 'Run-check'
+description: 'Wraps execution of command-line programs with check'
 inputs:
   token:
     description: "Github personal token to add commits to Pull Request"
     required: false
     default: ${{github.token}}
-  outputFile:
-    description: "Output for check summary"
+  run:
+    description: "Runs command-line programs using the operating system's shell."
+    required: true
+  continueOnFail:
+    description: "Prevents a step from failing when a execution fails. "
     required: false
+    default: true
+  name:
+    description: "Specifies name of the check if not provided will try to get it via api from step name, otherwise will use run property as name"
+    required: false
+    default: true
 runs:
   using: 'node16'
   main: 'dist/index.js'

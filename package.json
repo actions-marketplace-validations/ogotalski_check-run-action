@@ -1,7 +1,7 @@
 {
-  "name": "step-to-check-action",
+  "name": "Run-check",
   "version": "1.2",
-  "description": "Github action creates check from last step results",
+  "description": "Wraps execution of command-line programs with check",
   "main": "index.js",
   "scripts": {
     "lint": "eslint .",
@@ -26,7 +26,8 @@
   "homepage": "https://github.com/ogotalski/test-coverage-report#readme",
   "dependencies": {
     "@actions/core": "^1.2.6",
-    "@actions/github": "^4.0.0"
+    "@actions/github": "^4.0.0",
+    "@actions/exec": "^1.1.1"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.34.0",
