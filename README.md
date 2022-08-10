@@ -8,7 +8,7 @@ Wraps execution of command-line programs with check
 ###### Configuration:
 ```yaml
       - name: add check
-        uses: ogotalski/check-run-action@v1.2
+        uses: ogotalski/check-run-action@v1.3
         with:
           run: |
             chmod +x gradlew
@@ -38,7 +38,7 @@ jobs:
         run: echo '${{ toJSON(steps) }}'
       - name: add check
         id: test
-        uses: ogotalski/check-run-action@v1.2
+        uses: ogotalski/check-run-action@v1.3
         with:
           run: |
             chmod +x gradlew
