@@ -45,12 +45,14 @@ async function getExecOutput(command) {
         }
     }
     try {
-        resp.exitCode = await exec.exec(command, null, options)
+        resp.exitCode = await exec.exec(`/bin/bash -c "${command.replace(/"/g, '\\\"')}"`, null, options)
     } catch (e) {
         core.error(e)
     }
     return resp
 }
+
+//split string by new line or `&`
 
 async function execute(commands) {
     const execution = {}
@@ -82,15 +84,67 @@ async function execute(commands) {
     return execution
 }
 
-function markdownResult(result) {
+
+function markdownExecutionOutput(execution) {
+    const header = "<h4>Output:</h4>"
+    const logsSize = 60000; //65535 is maximum supported by api for output text
+    let output = execution.results.map(result => result.stdout).join("\n");
+    output = output.length > logsSize ? "...\n" + output.slice(-1 * logsSize) : output
+    const spoiler = "```\n" + output + "\n```"
+    return `<details><summary>${header}</summary>\n\n${spoiler}\n</details>\n`
+}
+
+function markdownResultHeader(result) {
     const icon = result.exitCode !== 0 ? " :x: " : " :heavy_check_mark: "
-    const header = `<kbd><b>${result.command}</b></kbd> - ${icon}<b>${result.conclusion}</b> in ${getDuration(result.start, result.end)} `
-    const spoiler = "\n\n```\n" + result.stdout + "```\n"
-    return `<dd><details><summary>${header}</summary>\n\n${spoiler}\n\n</details>\n\n</dd>`
+    return `<dd><kbd><b>${result.command}</b></kbd> - ${icon}<b>${result.conclusion}</b> in ${getDuration(result.start, result.end)} </dd>`
+
 }
 
 function markdownSummary(execution) {
-    return "<dl>" + execution.results.map(result => `${markdownResult(result)}`).join("\n") + "</dl>"
+    return "<dl><dh><h4> Run: </h4></dh>" + execution.results.map(result => `${markdownResultHeader(result)}`).join("\n") + "</dl>\n" + markdownExecutionOutput(execution)
+}
+
+async function updateCheck(octokit, stepNameProp, execution, output, checkId) {
+    const stepName = stepNameProp ? stepNameProp : await getStepName(octokit)
+    const checkName = stepName ? stepName : execution.commands
+    const request = {
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        head_sha: getPr(github.context.eventName).head,
+        name: checkName,
+        status: "in_progress",
+        started_at: new Date()
+    };
+    if (execution) {
+        request.started_at = execution.start
+        if (execution.end) {
+            let conclusion = execution.exitCode === 0 ? "success" : "failure";
+
+            request.conclusion = conclusion
+            request.status = "completed"
+            request.completed_at = execution.end
+            if (output) {
+                request.output = {
+                    title: checkName,
+                    summary: `### Result: ${conclusion}`,
+                    text: output
+                }
+            }
+        }
+    }
+
+    if (!checkId) {
+        core.debug("req: " + JSON.stringify(request))
+        const resp = await octokit.checks.create(request);
+        core.debug("resp: " + JSON.stringify(resp))
+        checkId = resp.data.id
+    } else {
+        request.check_run_id = checkId
+        core.debug("req: " + JSON.stringify(request))
+        const resp = await octokit.checks.update(request)
+        core.debug("resp: " + JSON.stringify(resp))
+    }
+    return checkId
 }
 
 async function run() {
@@ -98,50 +152,19 @@ async function run() {
         const octokit = new github.getOctokit(core.getInput('token'));
         const commands = core.getInput('run')
         const continueOnFail = core.getInput('continueOnFail')
-        const stepNameProp = core.getInput('stepName')
+        const stepNameProp = core.getInput('name')
         core.debug("commands: " + commands)
         core.debug("continueOnFail: " + continueOnFail)
-
+        core.debug("stepNameProp: " + stepNameProp)
+        const checkId = await updateCheck(octokit, stepNameProp, null, null, null)
         const execution = await execute(commands);
-        const stepName = stepNameProp? stepNameProp: await getStepName(octokit)
-        const checkName = stepName ? stepName : commands
         const output = markdownSummary(execution)
         core.debug("output: " + output)
-        let status = "completed";
-        let conclusion = execution.exitCode === 0 ? "success" : "failure";
-        core.debug("conclusion: " + conclusion)
-        if (!output) {
-            await octokit.checks.create({
-                owner: github.context.repo.owner,
-                repo: github.context.repo.repo,
-                head_sha: getPr(github.context.eventName).head,
-                name: checkName,
-                status: status,
-                conclusion: conclusion,
-                started_at: execution.start,
-                completed_at: execution.end
-            });
-        } else {
-            await octokit.checks.create({
-                owner: github.context.repo.owner,
-                repo: github.context.repo.repo,
-                head_sha: getPr(github.context.eventName).head,
-                name: checkName,
-                status: status,
-                conclusion: conclusion,
-                started_at: execution.start,
-                completed_at: execution.end,
-                output: {
-                    title: checkName,
-                    summary: `### Result: ${conclusion}`,
-                    text: output
-                }
-            });
-
-        }
+        core.debug("exitCode: " + execution.exitCode)
+        await updateCheck(octokit, stepNameProp, execution, output, checkId)
         if (!continueOnFail && execution.exitCode != 0)
-            core.setFailed(execution.results.map(result=> result.stderr).join("/n"))
-        core.setOutput("conclusion", conclusion)
+            core.setFailed(execution.results.map(result => result.stderr).join("/n"))
+        core.setOutput("conclusion", execution.conclusion)
     } catch (error) {
         core.setFailed(error)
     }

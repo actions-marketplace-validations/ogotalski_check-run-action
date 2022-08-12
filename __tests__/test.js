@@ -8,6 +8,7 @@ jest.mock("@actions/exec");
 
 describe("Test", function () {
     let createCheck
+    let updateCheck
 
     function getInput(key) {
         switch (key) {
@@ -22,13 +23,15 @@ describe("Test", function () {
 
     beforeEach(() => {
         console.log("mocking")
-        createCheck = jest.fn();
+        createCheck = jest.fn(()=>{return { data:{id: 1}}});
+        updateCheck = jest.fn();
         core.getInput = jest.fn(getInput);
         github.getOctokit = jest.fn(() => {
 
             return {
                 checks: {
                     create: createCheck,
+                    update: updateCheck,
                 },
                 actions: {
                     listJobsForWorkflowRun: jest.fn(() => {
@@ -173,8 +176,14 @@ describe("Test", function () {
             github.context = context;
 
             await action.run();
-            const expected = JSON.parse("{\"owner\":\"ogotalski\",\"repo\":\"test\",\"head_sha\":\"head\",\"name\":\"add check\",\"status\":\"completed\",\"conclusion\":\"success\",\"started_at\":\"2022-08-10T20:05:13.355Z\",\"completed_at\":\"2022-08-10T20:05:13.356Z\",\"output\":{\"title\":\"add check\",\"summary\":\"### Result: success\",\"text\":\"<dl><dd><details><summary><kbd><b>ls</b></kbd> -  :heavy_check_mark: <b>success</b> in  1ms </summary>\\n\\n\\n\\n```\\nstdoutstderr```\\n\\n\\n</details>\\n\\n</dd></dl>\"}}")
+            let expected = JSON.parse("{\"owner\":\"ogotalski\",\"repo\":\"test\",\"head_sha\":\"head\",\"name\":\"add check\",\"status\":\"in_progress\",\"started_at\":\"2022-08-11T12:11:15.146Z\"}")
             let result = createCheck.mock.calls[0][0];
+            result.started_at = expected.started_at
+            expect(result)
+                .toEqual(expected);
+            result = updateCheck.mock.calls[0][0];
+            expected = JSON.parse("{\"owner\":\"ogotalski\",\"repo\":\"test\",\"head_sha\":\"head\",\"name\":\"add check\",\"started_at\":\"2022-08-11T12:17:46.697Z\",\"status\":\"completed\",\"conclusion\":\"success\",\"completed_at\":\"2022-08-11T12:17:46.697Z\",\"output\":{\"title\":\"add check\",\"summary\":\"### Result: success\",\"text\":\"<dl><dd><kbd><b>ls</b></kbd> -  :heavy_check_mark: <b>success</b> in  0ms </dd></dl>\\n<details><summary><h4>Output:</h4></summary>\\n\\n\\n\\n```\\nstdoutstderr\\n```\\n\\n\\n</details>\\n\\n\"},\"check_run_id\":1}")
+
             result.output.text = expected.output.text
             result.started_at = expected.started_at
             result.completed_at = expected.completed_at

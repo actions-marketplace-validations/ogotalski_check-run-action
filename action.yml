@@ -15,7 +15,6 @@ inputs:
   name:
     description: "Specifies name of the check if not provided will try to get it via api from step name, otherwise will use run property as name"
     required: false
-    default: true
 runs:
   using: 'node16'
   main: 'dist/index.js'
