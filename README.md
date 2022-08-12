@@ -16,11 +16,15 @@ This action will combine two approaches  and create checks runs from step:
       - name: add check
         uses: ogotalski/check-run-action@main
         with:
+          # Runs command-line programs using the operating system's shell.
           run: |
             chmod +x gradlew
             ls
             ./gradlew test jacocoTestReport
+          # (Optional) Specifies name of the check if not provided will try to get it via api from step name, otherwise will use run property as name  
           name: Test
+          # (Optional) Prevents a step from failing when a execution fails. 
+          continueOnFail: true
 ```
 
 
